@@ -1,7 +1,7 @@
 ---
 title: "music section: music patterns"
 description: "Decode 64 patterns x 4 bytes at 0x3100 into MusicPattern[] (one PatternChannel per byte) and re-encode them back to bytes."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
