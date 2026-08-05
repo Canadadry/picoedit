@@ -1,7 +1,7 @@
 ---
 title: "label section: cover image (read + re-injection)"
 description: "Extract the upper 6 bits of the whole image into a PixelImage, and re-inject an edited PixelImage's upper 6 bits back into a pixel grid on encode."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement

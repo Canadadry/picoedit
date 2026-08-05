@@ -3,26 +3,55 @@ import assert from "node:assert/strict";
 
 export type CartBytes = Uint8Array & { readonly __cartBytesBrand: unique symbol };
 
+export interface PixelGrid {
+  width: number;
+  height: number;
+  channels: number;
+  depth: number;
+  data: Uint8Array;
+}
+
 const CART_WIDTH = 160;
 const CART_HEIGHT = 205;
 const CART_BYTES_LENGTH = CART_WIDTH * CART_HEIGHT;
 
-function assertCartDimensions(png: {
+function assertCartDimensions(grid: {
   width: number;
   height: number;
   depth: number;
   channels: number;
 }): void {
-  assert.equal(png.width, CART_WIDTH, `unexpected PNG width ${png.width}`);
-  assert.equal(png.height, CART_HEIGHT, `unexpected PNG height ${png.height}`);
-  assert.equal(png.depth, 8, `unexpected PNG bit depth ${png.depth}`);
-  assert.equal(png.channels, 4, `unexpected PNG channel count ${png.channels}`);
+  assert.equal(grid.width, CART_WIDTH, `unexpected PNG width ${grid.width}`);
+  assert.equal(grid.height, CART_HEIGHT, `unexpected PNG height ${grid.height}`);
+  assert.equal(grid.depth, 8, `unexpected PNG bit depth ${grid.depth}`);
+  assert.equal(grid.channels, 4, `unexpected PNG channel count ${grid.channels}`);
 }
 
-export function decode(pngBytes: Uint8Array): CartBytes {
+export function decodePixelGrid(pngBytes: Uint8Array): PixelGrid {
   const png = decodePng(pngBytes);
   assertCartDimensions(png);
-  const data = png.data;
+  return {
+    width: png.width,
+    height: png.height,
+    channels: png.channels,
+    depth: png.depth,
+    data: png.data as Uint8Array,
+  };
+}
+
+export function encodePixelGrid(grid: PixelGrid): Uint8Array {
+  return encodePng({
+    width: grid.width,
+    height: grid.height,
+    data: grid.data,
+    depth: grid.depth,
+    channels: grid.channels,
+  });
+}
+
+export function extractCartBytes(grid: PixelGrid): CartBytes {
+  assertCartDimensions(grid);
+  const data = grid.data;
   const bytes = new Uint8Array(CART_BYTES_LENGTH);
   for (let i = 0; i < CART_BYTES_LENGTH; i++) {
     const base = i * 4;
@@ -36,15 +65,14 @@ export function decode(pngBytes: Uint8Array): CartBytes {
   return bytes as CartBytes;
 }
 
-export function encode(bytes: CartBytes, originalPngBytes: Uint8Array): Uint8Array {
+export function injectCartBytes(bytes: CartBytes, baseGrid: PixelGrid): PixelGrid {
   assert.equal(
     bytes.length,
     CART_BYTES_LENGTH,
     `CartBytes must be ${CART_BYTES_LENGTH} bytes, got ${bytes.length}`,
   );
-  const png = decodePng(originalPngBytes);
-  assertCartDimensions(png);
-  const data = png.data;
+  assertCartDimensions(baseGrid);
+  const data = new Uint8Array(baseGrid.data);
   for (let i = 0; i < CART_BYTES_LENGTH; i++) {
     const base = i * 4;
     const byte = bytes[i]!;
@@ -57,11 +85,15 @@ export function encode(bytes: CartBytes, originalPngBytes: Uint8Array): Uint8Arr
     data[base + 2] = (data[base + 2]! & 0b11111100) | b2;
     data[base + 3] = (data[base + 3]! & 0b11111100) | a2;
   }
-  return encodePng({
-    width: png.width,
-    height: png.height,
-    data,
-    depth: png.depth,
-    channels: png.channels,
-  });
+  return { ...baseGrid, data };
+}
+
+export function decode(pngBytes: Uint8Array): CartBytes {
+  return extractCartBytes(decodePixelGrid(pngBytes));
+}
+
+export function encode(bytes: CartBytes, originalPngBytes: Uint8Array): Uint8Array {
+  const baseGrid = decodePixelGrid(originalPngBytes);
+  const injectedGrid = injectCartBytes(bytes, baseGrid);
+  return encodePixelGrid(injectedGrid);
 }

@@ -1,8 +1,9 @@
 import type { CartBytes } from "./cart-bytes.ts";
-import { decode as decodeCartBytes, encode as encodeCartBytes } from "./cart-bytes.ts";
-import type { MapGrid, MusicPattern, Sfx, SpriteFlags, SpriteSheet } from "./cart-data.ts";
+import { decodePixelGrid, encodePixelGrid, extractCartBytes, injectCartBytes } from "./cart-bytes.ts";
+import type { MapGrid, MusicPattern, PixelImage, Sfx, SpriteFlags, SpriteSheet } from "./cart-data.ts";
 import { decodeGff, encodeGff, GFF_OFFSET } from "./cart-gff.ts";
 import { decodeGfx, encodeGfx, GFX_OFFSET } from "./cart-gfx.ts";
+import { decodeLabel, encodeLabel } from "./cart-label.ts";
 import { decodeMap, encodeMap, MAP_OFFSET } from "./cart-map.ts";
 import { decodeMusic, encodeMusic, MUSIC_OFFSET } from "./cart-music.ts";
 import { decodeSfx, encodeSfx, SFX_OFFSET } from "./cart-sfx.ts";
@@ -14,16 +15,19 @@ export interface DecodedCart {
   map: MapGrid;
   music: MusicPattern[];
   sfx: Sfx[];
+  label: PixelImage;
 }
 
 export function decode(pngBytes: Uint8Array): DecodedCart {
-  const bytes = decodeCartBytes(pngBytes);
+  const grid = decodePixelGrid(pngBytes);
+  const bytes = extractCartBytes(grid);
   const gff = decodeGff(bytes);
   const gfx = decodeGfx(bytes);
   const map = decodeMap(bytes);
   const music = decodeMusic(bytes);
   const sfx = decodeSfx(bytes);
-  return { bytes, gff, gfx, map, music, sfx };
+  const label = decodeLabel(grid);
+  return { bytes, gff, gfx, map, music, sfx, label };
 }
 
 export function encode(cart: DecodedCart, originalPngBytes: Uint8Array): Uint8Array {
@@ -33,5 +37,8 @@ export function encode(cart: DecodedCart, originalPngBytes: Uint8Array): Uint8Ar
   bytes.set(encodeMap(cart.map), MAP_OFFSET);
   bytes.set(encodeMusic(cart.music), MUSIC_OFFSET);
   bytes.set(encodeSfx(cart.sfx), SFX_OFFSET);
-  return encodeCartBytes(bytes, originalPngBytes);
+  const baseGrid = decodePixelGrid(originalPngBytes);
+  const injectedGrid = injectCartBytes(bytes, baseGrid);
+  const finalGrid = encodeLabel(cart.label, injectedGrid);
+  return encodePixelGrid(finalGrid);
 }

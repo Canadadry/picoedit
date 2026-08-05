@@ -151,8 +151,11 @@ export interface MapGrid {
   height: number;
   cells: number[];
 }
-// TODO: pinned down for real in step 09
-export type PixelImage = unknown;
+export interface PixelImage {
+  width: 160;
+  height: 205;
+  pixels: { a: number; r: number; g: number; b: number }[];
+}
 
 function isIntegerInRange(value: number, min: number, max: number): boolean {
   return Number.isInteger(value) && value >= min && value <= max;
