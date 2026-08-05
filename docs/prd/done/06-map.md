@@ -1,7 +1,7 @@
 ---
 title: "map section: map grid (incl. shared area)"
 description: "Decode 0x1000-0x2FFF (the shared gfx2/map2 area plus the map proper) into a self-contained MapGrid and re-encode it back to bytes."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement

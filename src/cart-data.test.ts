@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { isValid } from "./cart-data.ts";
 import type {
   CartData,
+  MapGrid,
   MusicPattern,
   Note,
   PatternChannel,
@@ -13,6 +14,10 @@ import type {
 
 function makeSpriteSheet(): SpriteSheet {
   return { width: 128, height: 128, pixels: Array.from({ length: 128 * 128 }, () => 0) };
+}
+
+function makeMapGrid(): MapGrid {
+  return { width: 128, height: 64, cells: Array.from({ length: 128 * 64 }, () => 0) };
 }
 
 function makeSpriteFlags(): SpriteFlags {
@@ -60,7 +65,7 @@ function makeValidCart(): CartData {
     lua: "",
     gfx: makeSpriteSheet(),
     gff: Array.from({ length: 256 }, makeSpriteFlags),
-    map: {},
+    map: makeMapGrid(),
     sfx: Array.from({ length: 64 }, makeSfx),
     music: Array.from({ length: 64 }, makeMusicPattern),
     label: {},

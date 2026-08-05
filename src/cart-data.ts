@@ -146,8 +146,11 @@ export interface SpriteSheet {
   height: 128;
   pixels: IntegerRange_0_16[];
 }
-// TODO: pinned down for real in step 06
-export type MapGrid = unknown;
+export interface MapGrid {
+  width: number;
+  height: number;
+  cells: number[];
+}
 // TODO: pinned down for real in step 09
 export type PixelImage = unknown;
 
