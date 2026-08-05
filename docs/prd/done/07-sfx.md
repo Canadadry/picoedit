@@ -1,7 +1,7 @@
 ---
 title: "sfx section: sound effects"
 description: "Decode 64 sounds x 68 bytes at 0x3200 into Sfx[] (32 bit-packed notes + 4 metadata bytes each) and re-encode them back to bytes."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
