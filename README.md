@@ -33,12 +33,17 @@ browser-only library) for converting a real `.p8.png` cart to a folder of
 editable files and back:
 
 ```sh
-npm run cli -- extract cart.p8.png out/     # writes lua.lua, gfx.json, gff.json,
-                                             # map.json, sfx.json, music.json,
-                                             # label.json, original.p8.png into out/
-npm run cli -- compact out/ new-cart.p8.png # reassembles those files into a
-                                             # loadable .p8.png
+npm run cli -- decode cart.p8.png out/     # writes lua.lua, gfx.json, gff.json,
+                                            # map.json, sfx.json, music.json,
+                                            # label.json, original.p8.png into out/
+npm run cli -- encode out/ new-cart.p8.png # reassembles those files into a
+                                            # loadable .p8.png
 ```
+
+`encode` reads `original.p8.png` back out of the folder itself, so there's no
+need to separately track which cart an extracted folder came from. Running
+`encode` on a folder that's missing one of the required files fails with an
+error naming that specific file.
 
 ## Remaining work
 

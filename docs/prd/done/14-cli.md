@@ -1,7 +1,7 @@
 ---
 title: "CLI: p8.png ⟷ JSON folder"
 description: "Thin Node CLI wrapping decode()/encode() to convert a .p8.png cart to a folder of JSON/lua files and back, for use outside the browser during development."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
