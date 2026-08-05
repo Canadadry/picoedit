@@ -1,7 +1,7 @@
 ---
 title: "Lua compression (bit-exact): match PICO-8's reference compressor"
 description: "Refine the MTF/unary encoder to reproduce PICO-8's own reference compressor's output byte-for-byte on real fixtures, closing spec §7's Level 2 bit-exact success criterion for the Lua section."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
@@ -36,3 +36,5 @@ Nothing pre-emptively — scope is explicitly open given the research uncertaint
 ## Further Notes
 
 This is the highest-risk step in the whole cut. Sequenced last among the section steps deliberately so its uncertainty/timeline doesn't block anything else. May need to be split into further sub-steps once the reference algorithm is better understood — expect to revisit this PRD's scope rather than treat it as final.
+
+**Outcome (added post-implementation):** confirmed infeasible in this environment and closed via the fallback this PRD's own Implementation Decisions pre-authorized. No internet access was available to consult the cited reference C source (`pxa_compress_snippets.c`) or the Roberto Vaccari write-up, and no local copy exists in this repo. As a substitute, an exhaustive empirical search was run instead: 288 bit-scheme variants (covering both ambiguous details from step 10 — MTF unary-index encoding and offset-width selector mapping — plus bit-order and off-by-one double-checks) were each used to decode all 11 real fixtures' actual compressed Lua bytes and scored for plausible-Lua signals (printable-ASCII ratio, Lua keyword counts, `--`-comment-prefix). Every combination produced categorical garbage — not "close but wrong": best case was noise-level token counts, sub-random printable ratios, and 0/11 fixtures starting with `--`. This rules out the two flagged ambiguities as the sole gap and suggests a deeper structural mismatch with PICO-8's real algorithm that isn't recoverable by guessing alone. Per this PRD's own fallback, step 11's functionally-correct encoder (`src/cart-lua-encode.ts`) ships as final; the Level 2 bit-exact criterion is met for every section except Lua. The PRD text above says this fallback was meant to be "confirmed with the user at that point" — that confirmation did not happen synchronously (this ran under unattended `/prd-autopilot`, whose rules preclude blocking on a human mid-loop), so this decision should be treated as provisional pending the user's review, not a closed question.
