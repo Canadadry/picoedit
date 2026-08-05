@@ -16,7 +16,7 @@ npm run typecheck # tsc --noEmit, strict mode
 ```
 
 Source lives in `src/`, one `*.test.ts` file next to each module it covers,
-plus `src/level2-integration.test.ts` for the cross-cutting spec §7 Level 2
+plus `src/level2.test.ts` for the cross-cutting spec §7 Level 2
 check (decode real fixtures into sections, re-encode, and compare each
 section's bytes against the original per-section rather than per-module).
 Real `.p8.png` cartridge fixtures for integration tests live in `cart/` at

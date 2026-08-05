@@ -1,7 +1,7 @@
 ---
 title: "Level 2 integration test: bit-exact section recompression"
 description: "Prove spec §7's Level 2 criterion: decoding cart bytes into sections and recompressing them reproduces the original 32KB cart data bit-for-bit."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
