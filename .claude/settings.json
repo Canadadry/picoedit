@@ -1,0 +1,75 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit(src/**)",
+      "Edit(test/**)",
+      "Edit(docs/**)",
+      "Edit(cart/**)",
+      "Edit(package.json)",
+      "Edit(tsconfig.json)",
+      "Edit(.gitignore)",
+      "Edit(README.md)",
+      "Write(src/**)",
+      "Write(test/**)",
+      "Write(docs/**)",
+      "Write(cart/**)",
+      "Write(package.json)",
+      "Write(tsconfig.json)",
+      "Write(.gitignore)",
+      "Write(README.md)",
+      "Bash(mkdir *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git mv *)",
+      "Bash(sh scripts/git-hooks/install.sh)",
+      "Bash(make install)",
+      "Bash(make test)",
+      "Bash(make cli*)",
+      "Bash(.claude/skills/git-commit/scripts/status.sh)",
+      "Bash(.claude/skills/git-commit/scripts/unstaged-diff.sh *)",
+      "Bash(git status *)",
+      "Bash(git pull *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(xargs ls)",
+      "Bash(ls *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(cut *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(diff *)",
+      "Bash(pwd)",
+      "Bash(pngtopnm *)",
+      "Bash(ppmtobmp *)",
+      "Bash(bmptoppm *)",
+      "Bash(jq *)"
+    ],
+    "deny": [
+      "Edit(Makefile)",
+      "Write(Makefile)"
+    ],
+    "defaultMode": "dontAsk"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-git-c.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "picoedit",
+  "version": "0.1.0",
+  "description": "PICO-8 cart (.p8.png) extraction/compaction toolkit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "cli": "node --import tsx src/cli.ts"
+  },
+  "dependencies": {
+    "fast-png": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
