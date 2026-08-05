@@ -67,8 +67,7 @@ test("Level 2: decode/re-encode each section is bit-exact against the original c
         assert.deepStrictEqual(reencoded, sectionBytes(bytes, MUSIC_OFFSET, MUSIC_LENGTH));
       });
 
-      // TODO lua is a known, documented gap (see docs/prd/done/12-lua-compress-bitexact.md): not hard-asserted bit-exact here on purpose.
-      await t.test("lua (known gap, see PRD 12)", () => {
+      await t.test("lua", () => {
         const format = detectLuaFormat(bytes);
         let decoded: string;
         try {
@@ -83,7 +82,9 @@ test("Level 2: decode/re-encode each section is bit-exact against the original c
         }
         const reencoded = encodeLua(decoded);
         const original = sectionBytes(bytes, LUA_OFFSET, reencoded.length);
-        luaGapLog.push({ fixture, matched: bytesEqual(reencoded, original) });
+        const matched = bytesEqual(reencoded, original);
+        luaGapLog.push({ fixture, matched });
+        assert.ok(matched, `${fixture}: re-encoded Lua bytes are not bit-exact against the original`);
       });
     });
   }
@@ -91,7 +92,7 @@ test("Level 2: decode/re-encode each section is bit-exact against the original c
   t.after(() => {
     const matched = luaGapLog.filter((entry) => entry.matched).length;
     console.log(
-      `Level 2 lua bit-exactness (known gap, see PRD 12): ${matched}/${luaGapLog.length} non-legacy fixtures matched`,
+      `Level 2 lua bit-exactness: ${matched}/${luaGapLog.length} non-legacy fixtures matched`,
     );
   });
 });

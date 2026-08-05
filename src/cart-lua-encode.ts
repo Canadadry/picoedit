@@ -2,20 +2,17 @@ import assert from "node:assert/strict";
 
 const RECENT_MARKER = [0x00, 0x70, 0x78, 0x61];
 const MTF_TABLE_SIZE = 256;
-const MAX_COMPRESSED_LENGTH = 15360;
+// TODO structural ceiling, not PICO-8's advisory 15,360 figure: Lua region is 0x4300-0x7fff (15616 bytes) minus the 8-byte recent-format header
+const MAX_COMPRESSED_LENGTH = 15608;
 const MAX_OFFSET = 32767;
 const MIN_MATCH = 3;
-const MAX_CHAIN = 8192;
+const RAW_BLOCK_WINDOW = 32;
 
 class BitWriter {
-  private readonly bytes: number[] = [];
-  private bitPos = 0;
+  private readonly bits: number[] = [];
 
   writeBit(bit: number): void {
-    const byteIndex = this.bitPos >> 3;
-    if (byteIndex >= this.bytes.length) this.bytes.push(0);
-    if (bit) this.bytes[byteIndex] = this.bytes[byteIndex]! | (1 << (this.bitPos & 7));
-    this.bitPos++;
+    this.bits.push(bit & 1);
   }
 
   writeBits(value: number, width: number): void {
@@ -24,14 +21,33 @@ class BitWriter {
     }
   }
 
+  get length(): number {
+    return this.bits.length;
+  }
+
+  // TODO rewinds the write position so the periodic raw-block pass (see docs/prd12-compressor-research-findings.md §5) can overwrite already-emitted bits
+  truncate(bitPos: number): void {
+    this.bits.length = bitPos;
+  }
+
   toBytes(): Uint8Array {
-    return Uint8Array.from(this.bytes);
+    const byteLength = Math.ceil(this.bits.length / 8);
+    const out = new Uint8Array(byteLength);
+    for (let i = 0; i < this.bits.length; i++) {
+      if (this.bits[i]) out[i >> 3]! |= 1 << (i & 7);
+    }
+    return out;
   }
 }
 
-function writeMtfIndex(writer: BitWriter, index: number): void {
+function mtfGroupN(index: number): number {
   let n = 0;
   while (index >= 16 * ((1 << (n + 1)) - 1)) n++;
+  return n;
+}
+
+function writeMtfIndex(writer: BitWriter, index: number): void {
+  const n = mtfGroupN(index);
   const base = 16 * ((1 << n) - 1);
   for (let i = 0; i < n; i++) writer.writeBit(1);
   writer.writeBit(0);
@@ -65,141 +81,144 @@ function writeLength(writer: BitWriter, length: number): void {
   } while (group === 7);
 }
 
-function hash3(bytes: number[], i: number): number {
-  return (bytes[i]! << 16) | (bytes[i + 1]! << 8) | bytes[i + 2]!;
+// TODO PICO-8's own (lossy) 3-byte hash, replicated exactly so bucket contents (and
+// TODO thus search order/results) match the reference compressor's, per research findings §2
+function miniHash(bytes: number[], i: number): number {
+  return (bytes[i]! * 7 + bytes[i + 1]! * 1503 + bytes[i + 2]! * 51717) & 4095;
 }
 
-function matchBitCost(offset: number, length: number): number {
-  const width = offsetWidthFor(offset);
-  const selectorBits = width === 15 ? 1 : 2;
-  let remaining = length - 3;
-  let lengthBits = 0;
-  let group: number;
-  do {
-    group = Math.min(remaining, 7);
-    lengthBits += 3;
-    remaining -= group;
-  } while (group === 7);
-  return 1 + selectorBits + width + lengthBits;
+function distGroups(dist: number): number {
+  let groups = 0;
+  let d = dist;
+  while (d > 0) {
+    groups++;
+    d >>= 5;
+  }
+  return groups;
 }
-
-// TODO rough per-byte cost estimate for an MTF-encoded literal, used both as the DP's
-// TODO literal edge weight and to reject back-references costlier than encoding literally
-const LITERAL_BIT_ESTIMATE = 7;
 
 interface MatchCandidate {
-  offset: number;
   length: number;
-}
-
-// TODO returns at most one candidate per offset-width class (5/10/15 bits), each the
-// TODO longest match found within that class, so the DP below can pick whichever
-// TODO class trades offset-field width against match length most cheaply
-function findMatchesByClass(
-  bytes: number[],
-  i: number,
-  n: number,
-  chains: Map<number, number>,
-  prev: Int32Array,
-): MatchCandidate[] {
-  if (i + MIN_MATCH > n) return [];
-  const key = hash3(bytes, i);
-  let candidate = chains.get(key);
-  const bestByWidth = new Map<5 | 10 | 15, MatchCandidate>();
-  let chainCount = 0;
-  while (candidate !== undefined && candidate >= 0 && chainCount < MAX_CHAIN) {
-    const offset = i - candidate;
-    if (offset > MAX_OFFSET) break;
-    let length = 0;
-    const maxLength = n - i;
-    while (length < maxLength && bytes[i + length] === bytes[i + length - offset]) {
-      length++;
-    }
-    if (length >= MIN_MATCH) {
-      const width = offsetWidthFor(offset);
-      const existing = bestByWidth.get(width);
-      if (!existing || length > existing.length) bestByWidth.set(width, { offset, length });
-    }
-    chainCount++;
-    candidate = prev[candidate];
-  }
-  return Array.from(bestByWidth.values());
-}
-
-interface ParseEdge {
-  length: number;
-  cost: number;
   offset: number;
+  score: number;
 }
 
 function compress(bytes: number[]): Uint8Array {
   const n = bytes.length;
   const writer = new BitWriter();
 
-  const chains = new Map<number, number>();
-  const prev = new Int32Array(n).fill(-1);
-
-  function insertHash(pos: number): void {
-    if (pos + MIN_MATCH > n) return;
-    const key = hash3(bytes, pos);
-    prev[pos] = chains.get(key) ?? -1;
-    chains.set(key, pos);
+  const buckets = new Map<number, number[]>();
+  for (let i = 0; i + 2 < n; i++) {
+    const h = miniHash(bytes, i);
+    let list = buckets.get(h);
+    if (!list) {
+      list = [];
+      buckets.set(h, list);
+    }
+    list.push(i);
   }
 
-  const edges: ParseEdge[][] = new Array(n);
-  for (let i = 0; i < n; i++) {
-    const list: ParseEdge[] = [{ length: 1, cost: LITERAL_BIT_ESTIMATE, offset: -1 }];
-    for (const c of findMatchesByClass(bytes, i, n, chains, prev)) {
-      const cost = matchBitCost(c.offset, c.length);
-      if (cost < c.length * LITERAL_BIT_ESTIMATE) {
-        list.push({ length: c.length, cost, offset: c.offset });
+  function findBestMatch(pos: number): MatchCandidate | null {
+    const maxLen = n - pos;
+    if (maxLen < MIN_MATCH || pos + 2 >= n) return null;
+    const list = buckets.get(miniHash(bytes, pos));
+    if (!list) return null;
+
+    let bestScore = 0;
+    let bestLength = 0;
+    let bestOffset = 0;
+    for (const pos0 of list) {
+      if (pos0 >= pos) break;
+      if (pos0 < pos - MAX_OFFSET) continue;
+      let i = 0;
+      while (i < maxLen && pos0 + i < pos && bytes[pos0 + i] === bytes[pos + i]) i++;
+      while (i < maxLen && pos0 + i >= pos && bytes[pos0 + (i % (pos - pos0))] === bytes[pos + i]) i++;
+      const dist = pos - pos0;
+      const groups = distGroups(dist);
+      const bitCost = Math.min(groups, 2) + groups * 5 + 3 + 1;
+      const score = Math.floor((i * 256) / bitCost);
+      if (score > bestScore) {
+        bestScore = score;
+        bestLength = i;
+        bestOffset = dist;
       }
     }
-    edges[i] = list;
-    insertHash(i);
+    if (bestLength === 0) return null;
+    return { length: bestLength, offset: bestOffset, score: bestScore };
   }
 
-  const dp = new Float64Array(n + 1).fill(Infinity);
-  const chosenLength = new Int32Array(n + 1);
-  const chosenOffset = new Int32Array(n + 1).fill(-1);
-  dp[n] = 0;
-  for (let i = n - 1; i >= 0; i--) {
-    let best = Infinity;
-    let bestLength = 1;
-    let bestOffset = -1;
-    for (const edge of edges[i]!) {
-      const total = edge.cost + dp[i + edge.length]!;
-      if (total < best) {
-        best = total;
-        bestLength = edge.length;
-        bestOffset = edge.offset;
+  let mtf = Array.from({ length: MTF_TABLE_SIZE }, (_, i) => i);
+  let mtfBackup = mtf.slice();
+  let storedLastSegmentAsRaw = false;
+  let rawPosSrc0 = 0;
+  let rawPosSrc = 0;
+  let rawPosDestBits = 0;
+
+  let pos = 0;
+  while (pos < n) {
+    const c = bytes[pos]!;
+    const lpos = mtf.indexOf(c);
+    const literalCost = 6 + 2 * mtfGroupN(lpos);
+    const literalScore = Math.floor(256 / literalCost);
+
+    const match = findBestMatch(pos);
+    const blockLen = match?.length ?? 0;
+    const blockOffset = match?.offset ?? 0;
+    let blockScore = match?.score ?? 0;
+
+    if (blockLen >= MIN_MATCH && blockScore > literalScore && blockScore < 128) {
+      for (const ii of [1, 2]) {
+        const lookahead = findBestMatch(pos + ii);
+        const score2 = lookahead?.score ?? 0;
+        if (score2 > Math.floor((blockScore * 6) / 5)) {
+          blockScore = 0;
+          break;
+        }
       }
     }
-    dp[i] = best;
-    chosenLength[i] = bestLength;
-    chosenOffset[i] = bestOffset;
-  }
 
-  const table = Array.from({ length: MTF_TABLE_SIZE }, (_, i) => i);
-  let i = 0;
-  while (i < n) {
-    const length = chosenLength[i]!;
-    const offset = chosenOffset[i]!;
-    if (offset >= 0) {
+    if (blockLen >= MIN_MATCH && blockScore > literalScore) {
       writer.writeBit(0);
-      const width = offsetWidthFor(offset);
+      const width = offsetWidthFor(blockOffset);
       writeOffsetWidth(writer, width);
-      writer.writeBits(offset - 1, width);
-      writeLength(writer, length);
-      i += length;
+      writer.writeBits(blockOffset - 1, width);
+      writeLength(writer, blockLen);
+      pos += blockLen;
     } else {
-      const byte = bytes[i]!;
-      const index = table.indexOf(byte);
-      const [found] = table.splice(index, 1) as [number];
-      table.unshift(found);
       writer.writeBit(1);
-      writeMtfIndex(writer, index);
-      i += 1;
+      writeMtfIndex(writer, lpos);
+      const [moved] = mtf.splice(lpos, 1) as [number];
+      mtf.unshift(moved);
+      pos += 1;
+    }
+
+    const destBytePos = writer.length >>> 3;
+    const rawPosDestBytePos = rawPosDestBits >>> 3;
+    if (destBytePos - rawPosDestBytePos >= RAW_BLOCK_WINDOW || pos === n) {
+      const compressedSize = destBytePos - rawPosDestBytePos;
+      const rawSize = pos - rawPosSrc;
+      const margin = rawPosSrc0 === rawPosSrc ? 3 : 0;
+      if (compressedSize > rawSize + margin) {
+        if (!storedLastSegmentAsRaw) {
+          writer.truncate(rawPosDestBits);
+          writer.writeBit(0);
+          writer.writeBit(1);
+          writer.writeBit(0);
+          writer.writeBits(0, 10);
+        } else {
+          writer.truncate(rawPosDestBits - 8);
+        }
+        for (let k = 0; k < rawSize; k++) writer.writeBits(bytes[rawPosSrc + k]!, 8);
+        writer.writeBits(0, 8);
+        storedLastSegmentAsRaw = true;
+        mtf = mtfBackup.slice();
+      } else {
+        storedLastSegmentAsRaw = false;
+        rawPosSrc0 = pos;
+        mtfBackup = mtf.slice();
+      }
+      rawPosDestBits = writer.length;
+      rawPosSrc = pos;
     }
   }
 

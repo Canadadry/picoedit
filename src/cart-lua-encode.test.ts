@@ -54,7 +54,7 @@ test("encodeLua round-trips real fixtures' decoded Lua source through decodeLua/
   assert.ok(sawRecentFixture, "expected at least one fixture with recent-format Lua");
 });
 
-test("encodeLua keeps a large real fixture's re-encoded output under the 15,360-byte compressed limit", () => {
+test("encodeLua keeps a large real fixture's re-encoded output under the 15,608-byte structural Lua-region limit", () => {
   let largestFixture: { fixture: string; text: string } | null = null;
   for (const fixture of fixtures) {
     const bytes = decodeCartBytes(readFileSync(path.join(cartDir, fixture)));
@@ -69,7 +69,7 @@ test("encodeLua keeps a large real fixture's re-encoded output under the 15,360-
   const encoded = encodeLua(largestFixture!.text);
   const compressedLength = encoded.length - 8;
   assert.ok(
-    compressedLength < 15360,
-    `${largestFixture!.fixture}: compressed length ${compressedLength} is not under 15,360 bytes`,
+    compressedLength < 15608,
+    `${largestFixture!.fixture}: compressed length ${compressedLength} is not under the 15,608-byte structural limit`,
   );
 });
