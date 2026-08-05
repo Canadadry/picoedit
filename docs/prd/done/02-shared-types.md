@@ -1,7 +1,7 @@
 ---
 title: "Shared CartData types and isValid"
 description: "Define the CartData structured-section types (per spec §8.7) and a single isValid function that centralizes runtime validation of array lengths and numeric ranges."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
