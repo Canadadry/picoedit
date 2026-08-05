@@ -1,7 +1,7 @@
 ---
 title: "gff section: sprite flags"
 description: "Decode 256 bytes at 0x3000 into 256 SpriteFlags structs (8 named booleans each) and re-encode them back to bytes."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
