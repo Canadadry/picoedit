@@ -12,7 +12,7 @@ const cartDir = path.join(
 );
 const fixtures = readdirSync(cartDir).filter((name) => name.endsWith(".p8.png"));
 
-test("decode/encode round-trip preserves cart bytes and gff for every real fixture", async (t) => {
+test("decode/encode round-trip preserves cart bytes, gff and gfx for every real fixture", async (t) => {
   assert.ok(fixtures.length > 0, "expected at least one .p8.png fixture in cart/");
   for (const fixture of fixtures) {
     await t.test(fixture, () => {
@@ -22,6 +22,7 @@ test("decode/encode round-trip preserves cart bytes and gff for every real fixtu
       const roundTripped = decode(reencodedPngBytes);
       assert.deepStrictEqual(roundTripped.bytes, cart.bytes);
       assert.deepStrictEqual(roundTripped.gff, cart.gff);
+      assert.deepStrictEqual(roundTripped.gfx, cart.gfx);
     });
   }
 });

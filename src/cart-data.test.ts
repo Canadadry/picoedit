@@ -8,7 +8,12 @@ import type {
   PatternChannel,
   Sfx,
   SpriteFlags,
+  SpriteSheet,
 } from "./cart-data.ts";
+
+function makeSpriteSheet(): SpriteSheet {
+  return { width: 128, height: 128, pixels: Array.from({ length: 128 * 128 }, () => 0) };
+}
 
 function makeSpriteFlags(): SpriteFlags {
   return {
@@ -53,7 +58,7 @@ function makeMusicPattern(): MusicPattern {
 function makeValidCart(): CartData {
   return {
     lua: "",
-    gfx: {},
+    gfx: makeSpriteSheet(),
     gff: Array.from({ length: 256 }, makeSpriteFlags),
     map: {},
     sfx: Array.from({ length: 64 }, makeSfx),

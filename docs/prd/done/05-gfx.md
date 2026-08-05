@@ -1,7 +1,7 @@
 ---
 title: "gfx section: sprite sheet"
 description: "Decode the top 4KB (0x0000-0x0FFF, sprites 0-127) of the sprite sheet into a SpriteSheet structure and re-encode it back to bytes."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement

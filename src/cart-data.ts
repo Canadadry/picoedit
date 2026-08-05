@@ -141,8 +141,11 @@ export type LuaFormat =
   | { kind: "legacy" }
   | { kind: "raw"; text: string };
 
-// TODO: pinned down for real in step 05
-export type SpriteSheet = unknown;
+export interface SpriteSheet {
+  width: 128;
+  height: 128;
+  pixels: IntegerRange_0_16[];
+}
 // TODO: pinned down for real in step 06
 export type MapGrid = unknown;
 // TODO: pinned down for real in step 09
