@@ -50,55 +50,10 @@ test("decodeLua throws a clear error for the unsupported legacy format", () => {
   assert.throws(() => decodeLua({ kind: "legacy" }), /legacy/i);
 });
 
-function pushBits(bits: number[], value: number, width: number): void {
-  for (let i = 0; i < width; i++) {
-    bits.push((value >> i) & 1);
-  }
-}
-
-function packBits(bits: number[]): Uint8Array {
-  const byteCount = Math.ceil(bits.length / 8);
-  const bytes = new Uint8Array(byteCount);
-  bits.forEach((bit, i) => {
-    if (bit) bytes[i >> 3]! |= 1 << (i & 7);
-  });
-  return bytes;
-}
-
-function buildHandTracedCompressedStream(): Uint8Array {
-  const bits: number[] = [];
-
-  pushBits(bits, 1, 1);
-  pushBits(bits, 0, 1);
-
-  pushBits(bits, 1, 1);
-  pushBits(bits, 1, 1);
-  pushBits(bits, 0, 1);
-  pushBits(bits, 0, 1);
-
-  pushBits(bits, 0, 1);
-  pushBits(bits, 0, 1);
-  pushBits(bits, 2, 5);
-  pushBits(bits, 2, 3);
-
-  pushBits(bits, 0, 1);
-  pushBits(bits, 1, 1);
-  pushBits(bits, 0, 1);
-  pushBits(bits, 1, 10);
-  pushBits(bits, 5, 8);
-  pushBits(bits, 6, 8);
-  pushBits(bits, 0, 8);
-
-  return packBits(bits);
-}
-
-test("decodeLua decodes a hand-traced recent-format stream through every branch (literal, back-reference, uncompressed block)", () => {
-  const compressed = buildHandTracedCompressedStream();
-  const text = decodeLua({ kind: "recent", compressed, decompressedLength: 6 });
-  assert.deepEqual(
-    Array.from(text, (ch) => ch.charCodeAt(0)),
-    [0, 1, 0, 1, 5, 6],
-  );
+test("decodeLua decodes the research findings' hand-traced worked example (\"aa\") from exact bytes", () => {
+  const compressed = Uint8Array.from([0x17, 0x07]);
+  const text = decodeLua({ kind: "recent", compressed, decompressedLength: 2 });
+  assert.equal(text, "aa");
 });
 
 test("decodeLua produces non-empty, plausible-looking output for real fixtures with recent-format Lua", async (t) => {

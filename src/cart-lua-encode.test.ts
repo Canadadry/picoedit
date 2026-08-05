@@ -25,6 +25,14 @@ function makeCartBytesFromLuaBytes(luaBytes: Uint8Array) {
   return bytes as unknown as ReturnType<typeof decodeCartBytes>;
 }
 
+test("encodeLua encodes the research findings' hand-traced worked example (\"aa\") to the exact byte sequence", () => {
+  const encoded = encodeLua("aa");
+  assert.deepEqual(
+    Array.from(encoded),
+    [0x00, 0x70, 0x78, 0x61, 0x00, 0x02, 0x00, 0x0a, 0x17, 0x07],
+  );
+});
+
 test("encodeLua round-trips a short hand-crafted string through decodeLua/detectLuaFormat", () => {
   const original = "print('hello world')\n";
   assert.equal(roundTrip(original), original);

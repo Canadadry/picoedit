@@ -66,18 +66,18 @@ class BitReader {
 function readMtfIndex(reader: BitReader): number {
   let n = 0;
   while (reader.readBit() === 1) n++;
-  const fixed = n === 0 ? 0 : reader.readBits(n);
-  return (1 << n) - 1 + fixed;
+  const fixedWidth = 4 + n;
+  const base = 16 * ((1 << n) - 1);
+  return base + reader.readBits(fixedWidth);
 }
 
 function readOffsetWidth(reader: BitReader): 5 | 10 | 15 {
-  if (reader.readBit() === 0) return 5;
-  if (reader.readBit() === 0) return 10;
-  return 15;
+  if (reader.readBit() === 0) return 15;
+  return reader.readBit() === 1 ? 5 : 10;
 }
 
 function readLength(reader: BitReader): number {
-  let length = 0;
+  let length = 3;
   let group: number;
   do {
     group = reader.readBits(3);
@@ -104,7 +104,7 @@ function decodeRecent(compressed: Uint8Array, decompressedLength: number): strin
       output.push(byte);
     } else {
       const width = readOffsetWidth(reader);
-      const offset = reader.readBits(width);
+      const offset = reader.readBits(width) + 1;
       if (width === 10 && offset === 1) {
         for (;;) {
           const byte = reader.readBits(8);

@@ -39,3 +39,5 @@ Implement `encodeLua(text: string): Uint8Array`, a greedy (or otherwise straight
 ## Further Notes
 
 Deliberately the easier half of "make Lua compression work" — get correctness first, exactness second.
+
+**Follow-up note (bit scheme corrected):** `encodeLua` mirrored the same guessed bit scheme as PRD 10's decoder (Elias-gamma-style MTF index, fixed-2-bit offset-width selector), which was later confirmed wrong (see `docs/prd12-research-findings.md` and PRD 10's follow-up note). `writeMtfIndex`, `writeOffsetWidth`, and the offset/length encoding in `src/cart-lua-encode.ts` were corrected to match the real bucketed MTF-index scheme and variable-length offset-width selector, mirroring the corrected decoder.

@@ -5,7 +5,7 @@ const MTF_TABLE_SIZE = 256;
 const MAX_COMPRESSED_LENGTH = 15360;
 const MAX_OFFSET = 32767;
 const MIN_MATCH = 3;
-const MAX_CHAIN = 64;
+const MAX_CHAIN = 8192;
 
 class BitWriter {
   private readonly bytes: number[] = [];
@@ -31,36 +31,32 @@ class BitWriter {
 
 function writeMtfIndex(writer: BitWriter, index: number): void {
   let n = 0;
-  while (index > (1 << (n + 1)) - 2) n++;
+  while (index >= 16 * ((1 << (n + 1)) - 1)) n++;
+  const base = 16 * ((1 << n) - 1);
   for (let i = 0; i < n; i++) writer.writeBit(1);
   writer.writeBit(0);
-  if (n > 0) {
-    const fixed = index - ((1 << n) - 1);
-    writer.writeBits(fixed, n);
-  }
+  writer.writeBits(index - base, 4 + n);
 }
 
 function offsetWidthFor(offset: number): 5 | 10 | 15 {
-  if (offset <= 31) return 5;
-  if (offset <= 1023) return 10;
+  // TODO offset==1 always lands in the <=32 branch (width 5); width 10 with a raw
+  // TODO field of 0 (offset 1) is reserved as the uncompressed-block escape sentinel.
+  if (offset <= 32) return 5;
+  if (offset <= 1024) return 10;
   return 15;
 }
 
 function writeOffsetWidth(writer: BitWriter, width: 5 | 10 | 15): void {
-  if (width === 5) {
+  if (width === 15) {
     writer.writeBit(0);
     return;
   }
   writer.writeBit(1);
-  if (width === 10) {
-    writer.writeBit(0);
-    return;
-  }
-  writer.writeBit(1);
+  writer.writeBit(width === 5 ? 1 : 0);
 }
 
 function writeLength(writer: BitWriter, length: number): void {
-  let remaining = length;
+  let remaining = length - 3;
   let group: number;
   do {
     group = Math.min(remaining, 7);
@@ -73,18 +69,43 @@ function hash3(bytes: number[], i: number): number {
   return (bytes[i]! << 16) | (bytes[i + 1]! << 8) | bytes[i + 2]!;
 }
 
-function findBestMatch(
+function matchBitCost(offset: number, length: number): number {
+  const width = offsetWidthFor(offset);
+  const selectorBits = width === 15 ? 1 : 2;
+  let remaining = length - 3;
+  let lengthBits = 0;
+  let group: number;
+  do {
+    group = Math.min(remaining, 7);
+    lengthBits += 3;
+    remaining -= group;
+  } while (group === 7);
+  return 1 + selectorBits + width + lengthBits;
+}
+
+// TODO rough per-byte cost estimate for an MTF-encoded literal, used both as the DP's
+// TODO literal edge weight and to reject back-references costlier than encoding literally
+const LITERAL_BIT_ESTIMATE = 7;
+
+interface MatchCandidate {
+  offset: number;
+  length: number;
+}
+
+// TODO returns at most one candidate per offset-width class (5/10/15 bits), each the
+// TODO longest match found within that class, so the DP below can pick whichever
+// TODO class trades offset-field width against match length most cheaply
+function findMatchesByClass(
   bytes: number[],
   i: number,
   n: number,
   chains: Map<number, number>,
   prev: Int32Array,
-): { offset: number; length: number } | null {
-  if (i + MIN_MATCH > n) return null;
+): MatchCandidate[] {
+  if (i + MIN_MATCH > n) return [];
   const key = hash3(bytes, i);
   let candidate = chains.get(key);
-  let bestLength = 0;
-  let bestOffset = 0;
+  const bestByWidth = new Map<5 | 10 | 15, MatchCandidate>();
   let chainCount = 0;
   while (candidate !== undefined && candidate >= 0 && chainCount < MAX_CHAIN) {
     const offset = i - candidate;
@@ -94,21 +115,26 @@ function findBestMatch(
     while (length < maxLength && bytes[i + length] === bytes[i + length - offset]) {
       length++;
     }
-    if (length > bestLength) {
-      bestLength = length;
-      bestOffset = offset;
+    if (length >= MIN_MATCH) {
+      const width = offsetWidthFor(offset);
+      const existing = bestByWidth.get(width);
+      if (!existing || length > existing.length) bestByWidth.set(width, { offset, length });
     }
     chainCount++;
     candidate = prev[candidate];
   }
-  if (bestLength < MIN_MATCH) return null;
-  return { offset: bestOffset, length: bestLength };
+  return Array.from(bestByWidth.values());
+}
+
+interface ParseEdge {
+  length: number;
+  cost: number;
+  offset: number;
 }
 
 function compress(bytes: number[]): Uint8Array {
   const n = bytes.length;
   const writer = new BitWriter();
-  const table = Array.from({ length: MTF_TABLE_SIZE }, (_, i) => i);
 
   const chains = new Map<number, number>();
   const prev = new Int32Array(n).fill(-1);
@@ -120,22 +146,52 @@ function compress(bytes: number[]): Uint8Array {
     chains.set(key, pos);
   }
 
-  let hashInserted = 0;
+  const edges: ParseEdge[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const list: ParseEdge[] = [{ length: 1, cost: LITERAL_BIT_ESTIMATE, offset: -1 }];
+    for (const c of findMatchesByClass(bytes, i, n, chains, prev)) {
+      const cost = matchBitCost(c.offset, c.length);
+      if (cost < c.length * LITERAL_BIT_ESTIMATE) {
+        list.push({ length: c.length, cost, offset: c.offset });
+      }
+    }
+    edges[i] = list;
+    insertHash(i);
+  }
+
+  const dp = new Float64Array(n + 1).fill(Infinity);
+  const chosenLength = new Int32Array(n + 1);
+  const chosenOffset = new Int32Array(n + 1).fill(-1);
+  dp[n] = 0;
+  for (let i = n - 1; i >= 0; i--) {
+    let best = Infinity;
+    let bestLength = 1;
+    let bestOffset = -1;
+    for (const edge of edges[i]!) {
+      const total = edge.cost + dp[i + edge.length]!;
+      if (total < best) {
+        best = total;
+        bestLength = edge.length;
+        bestOffset = edge.offset;
+      }
+    }
+    dp[i] = best;
+    chosenLength[i] = bestLength;
+    chosenOffset[i] = bestOffset;
+  }
+
+  const table = Array.from({ length: MTF_TABLE_SIZE }, (_, i) => i);
   let i = 0;
   while (i < n) {
-    while (hashInserted < i) {
-      insertHash(hashInserted);
-      hashInserted++;
-    }
-
-    const match = findBestMatch(bytes, i, n, chains, prev);
-    if (match) {
+    const length = chosenLength[i]!;
+    const offset = chosenOffset[i]!;
+    if (offset >= 0) {
       writer.writeBit(0);
-      const width = offsetWidthFor(match.offset);
+      const width = offsetWidthFor(offset);
       writeOffsetWidth(writer, width);
-      writer.writeBits(match.offset, width);
-      writeLength(writer, match.length);
-      i += match.length;
+      writer.writeBits(offset - 1, width);
+      writeLength(writer, length);
+      i += length;
     } else {
       const byte = bytes[i]!;
       const index = table.indexOf(byte);
