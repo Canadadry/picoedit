@@ -1,7 +1,7 @@
 ---
 title: "Project scaffolding + Level 1 integration test loop"
 description: "Set up strict TypeScript tooling and a test runner, then implement decode()/encode() — the steganographic round-trip between a real .p8.png and its 32KB CartBytes payload — proving the whole pipeline end-to-end with one real-fixture integration test that runs via make test and must stay green through every later PRD."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
