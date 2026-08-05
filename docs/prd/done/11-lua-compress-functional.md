@@ -1,7 +1,7 @@
 ---
 title: "Lua compression (functional): MTF/unary encoder"
 description: "Implement an MTF/unary encoder producing a valid, decodable compressed stream under the 15,360-byte limit — correctness measured by round-tripping through step 10's decoder, not yet by matching PICO-8's exact output."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement

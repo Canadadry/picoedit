@@ -4,10 +4,14 @@ import type { MapGrid, MusicPattern, PixelImage, Sfx, SpriteFlags, SpriteSheet }
 import { decodeGff, encodeGff, GFF_OFFSET } from "./cart-gff.ts";
 import { decodeGfx, encodeGfx, GFX_OFFSET } from "./cart-gfx.ts";
 import { decodeLabel, encodeLabel } from "./cart-label.ts";
-import { decodeLua, detectLuaFormat } from "./cart-lua.ts";
+import { encodeLua } from "./cart-lua-encode.ts";
+import { decodeLua, detectLuaFormat, LUA_OFFSET } from "./cart-lua.ts";
 import { decodeMap, encodeMap, MAP_OFFSET } from "./cart-map.ts";
 import { decodeMusic, encodeMusic, MUSIC_OFFSET } from "./cart-music.ts";
 import { decodeSfx, encodeSfx, SFX_OFFSET } from "./cart-sfx.ts";
+
+const CART_HEADER_OFFSET = 0x8000;
+const LUA_REGION_LENGTH = CART_HEADER_OFFSET - LUA_OFFSET;
 
 export interface DecodedCart {
   bytes: CartBytes;
@@ -40,6 +44,8 @@ export function encode(cart: DecodedCart, originalPngBytes: Uint8Array): Uint8Ar
   bytes.set(encodeMap(cart.map), MAP_OFFSET);
   bytes.set(encodeMusic(cart.music), MUSIC_OFFSET);
   bytes.set(encodeSfx(cart.sfx), SFX_OFFSET);
+  bytes.fill(0, LUA_OFFSET, LUA_OFFSET + LUA_REGION_LENGTH);
+  bytes.set(encodeLua(cart.lua), LUA_OFFSET);
   const baseGrid = decodePixelGrid(originalPngBytes);
   const injectedGrid = injectCartBytes(bytes, baseGrid);
   const finalGrid = encodeLabel(cart.label, injectedGrid);
