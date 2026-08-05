@@ -1,7 +1,7 @@
 ---
 title: "Cart header: SHA1 verify/compute and passthrough bytes"
 description: "Verify the cart's SHA1 on decode and recompute it on encode; carry the unparsed version/platform and reserved bytes through unchanged."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
