@@ -1,7 +1,7 @@
 ---
 title: "Malformed cart fixtures for error-path testing"
 description: "Add deliberately-malformed .p8.png fixtures so error/defensive-check paths (truncated bytes, corrupt SHA1, wrong section lengths) can be integration-tested against real files instead of hand-crafted byte arrays."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
