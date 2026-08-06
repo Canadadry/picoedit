@@ -1,7 +1,7 @@
 ---
 title: "React app: GFF (sprite flags) tab"
 description: "A standalone screen for viewing and toggling the 8 named flags on each of the 256 sprites, given a dedicated route rather than PICO-8's native placement inside the sprite editor's bottom panel."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
