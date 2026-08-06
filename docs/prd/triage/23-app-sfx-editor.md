@@ -6,11 +6,11 @@ status: needs-triage
 
 ## Problem Statement
 
-`CartData.sfx` (64 `Sfx` entries, each 32 `Note`s plus speed/loop/editor-mode metadata, see `internal/pico8/cart-data.ts` and `internal/pico8/cart-sfx.ts`) currently has no editing surface at all — it can only be read/written as raw `sfx.json` via the CLI (PRD 14). PICO-8's own sfx editor packs this into a small fixed-size window with a piano-roll ("pitch mode") and a tracker grid ("tracker mode"), one of 64 sound slots at a time, `SPACE` to preview. This PRD gives the Sfx tab a full-size version of that same editing capability.
+`CartData.sfx` (64 `Sfx` entries, each 32 `Note`s plus speed/loop/editor-mode metadata, see `src/internal/pico8/cart-data.ts` and `src/internal/pico8/cart-sfx.ts`) currently has no editing surface at all — it can only be read/written as raw `sfx.json` via the CLI (PRD 14). PICO-8's own sfx editor packs this into a small fixed-size window with a piano-roll ("pitch mode") and a tracker grid ("tracker mode"), one of 64 sound slots at a time, `SPACE` to preview. This PRD gives the Sfx tab a full-size version of that same editing capability.
 
 ## Solution
 
-`app/sfx/SfxTab.tsx` + `app/sfx/components/`, reading/writing `CartContext.cart.sfx` (an array of 64 `Sfx`). Layout:
+`src/app/sfx/SfxTab.tsx` + `src/app/sfx/components/`, reading/writing `CartContext.cart.sfx` (an array of 64 `Sfx`). Layout:
 
 - **Slot picker** (`components/SfxSlotList.tsx`): an 8×8 grid of the 64 slots (numbered 00-63, matching PICO-8's own numbering), the selected slot highlighted. Clicking selects it; no drag-reorder (slots are addressed by index everywhere else in the cart — a music `PatternChannel.sfxId` — so slots don't move).
 - **Note grid** (`components/SfxNoteGrid.tsx`): the selected `Sfx`'s 32 `Note`s as rows, one column each for pitch, instrument, volume, effect — every field directly editable (pitch via a dropdown/piano-key picker showing note name + octave derived from the 0-63 range, per PICO-8's `C0`-`C5`-ish note naming; instrument 0-15; volume 0-7; effect one of the 8 named `Effect` values). This single table is the whole editing surface — it already exposes every field losslessly, unlike native PICO-8's split between a faster-but-lossy-to-read "pitch mode" (paint pitches by dragging, other fields hidden) and a complete-but-manual "tracker mode" (this grid). Building the drag-paint pitch mode as an additional *input method* over the same data is a reasonable v2 addition, not required for parity, and is called out in Further Notes rather than built here.
@@ -27,15 +27,14 @@ No audio synthesis or playback is implemented in this PRD — see Out of Scope.
 
 ## Implementation Decisions
 
-- Depends on PRD 18 (app shell, routing, `CartContext`) and PRD 16 (repo restructure — imports become `internal/pico8/cart-data.ts` etc.) landing first.
-- Pitch (`IntegerRange_0_64`) is displayed as a note name + octave (a small pure `pitchToNoteName`/`noteNameToPitch` pair of helpers in `app/sfx/pitch.ts`), not a raw 0-63 number, since that's how both PICO-8 itself and any musician would read it.
+- Depends on PRD 18 (landed — app shell, routing, `CartContext`) and PRD 16 (landed — repo restructure — imports become `src/internal/pico8/cart-data.ts` etc.) landing first.
+- Pitch (`IntegerRange_0_64`) is displayed as a note name + octave (a small pure `pitchToNoteName`/`noteNameToPitch` pair of helpers in `src/app/sfx/pitch.ts`), not a raw 0-63 number, since that's how both PICO-8 itself and any musician would read it.
 - Instrument slots 8-15 ("custom instruments derived from sfx 0-7" per PICO-8's own docs) are selectable in the dropdown like any other instrument value (0-15) — this tab does not attempt to show *what* a custom instrument sounds like or let you author one; it's just an integer field like any other `Note` property, preserved and editable, matching how e.g. `gff`'s flags are edited as plain data without needing the map renderer to exist first.
 - Edits go through `CartContext.updateCart({ sfx: <new array> })` (immutable replace of the whole `sfx` array on any single-note edit, same pattern every other tab uses) — no per-slot or per-note fine-grained context actions, keeping `CartContext`'s API surface from PRD 18 unchanged.
 
 ## Testing Decisions
 
-- No automated tests in this pass, consistent with PRD 18's deferred app-testing-framework decision.
-- Manual verification: load a real fixture from `cart/`, confirm every one of its 64 sfx slots' notes/speed/loop/editorMode display correctly against the same fixture's `sfx.json` (produced via `cli decode`), edit a handful of fields across different slots, download, and re-decode the result to confirm the edited fields round-trip and everything untouched is byte-identical to the original.
+- Component tests (Vitest + React Testing Library, jsdom) render `SfxTab` inside a real `CartProvider` loaded with an actual fixture from `cart/`, and assert: the slot picker's 64 slots and the selected slot's note grid/metadata panel match that fixture's actual decoded `sfx` values (cross-checked against the same fixture's `sfx.json`, producible via `cli decode` for the assertion baseline); editing a handful of fields across different slots via `userEvent` updates `CartContext`'s `sfx` array correctly; and a round-trip (encode the result then decode it again in the test itself) shows the edited fields changed and everything untouched is byte-identical to the original. Pure-value display (pitch/instrument/volume/effect dropdowns, numeric steppers) needs no canvas/visual check, so no manual-only gap remains for this tab beyond eyeballing overall layout once.
 
 ## Out of Scope
 
