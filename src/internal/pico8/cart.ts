@@ -37,7 +37,26 @@ export function decode(pngBytes: Uint8Array): DecodedCart {
   return { bytes, gff, gfx, lua, map, music, sfx, label };
 }
 
+const GFX_MAP_SHARED_PIXEL_OFFSET = 8192;
+const GFX_MAP_SHARED_BYTE_COUNT = 4096;
+
+function assertGfxMapSharedRegionConsistent(cart: DecodedCart): void {
+  for (let i = 0; i < GFX_MAP_SHARED_BYTE_COUNT; i++) {
+    const left = cart.gfx.pixels[GFX_MAP_SHARED_PIXEL_OFFSET + i * 2]!;
+    const right = cart.gfx.pixels[GFX_MAP_SHARED_PIXEL_OFFSET + i * 2 + 1]!;
+    const gfxByte = ((right << 4) | left) & 0xff;
+    const mapByte = cart.map.cells[i]! & 0xff;
+    if (gfxByte !== mapByte) {
+      throw new Error(
+        `encode: cart.gfx sprites 128-255 disagree with cart.map's shared cells at byte offset ${i}: ` +
+          `gfx derives 0x${gfxByte.toString(16).padStart(2, "0")} but map.cells[${i}] is 0x${mapByte.toString(16).padStart(2, "0")}`,
+      );
+    }
+  }
+}
+
 export function encode(cart: DecodedCart, originalPngBytes: Uint8Array): Uint8Array {
+  assertGfxMapSharedRegionConsistent(cart);
   const bytes = new Uint8Array(cart.bytes) as CartBytes;
   bytes.set(encodeGff(cart.gff), GFF_OFFSET);
   bytes.set(encodeGfx(cart.gfx), GFX_OFFSET);

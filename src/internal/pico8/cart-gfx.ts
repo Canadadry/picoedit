@@ -3,7 +3,7 @@ import type { CartBytes } from "./cart-bytes.ts";
 import type { IntegerRange_0_16, SpriteSheet } from "./cart-data.ts";
 
 export const GFX_OFFSET = 0x0000;
-export const GFX_LENGTH = 0x1000;
+export const GFX_LENGTH = 0x2000;
 
 const SHEET_WIDTH: 128 = 128;
 const SHEET_HEIGHT: 128 = 128;

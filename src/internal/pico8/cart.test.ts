@@ -64,3 +64,14 @@ test("decode/encode round-trip preserves cart bytes, gff, gfx, map, music, sfx a
     });
   }
 });
+
+test("encode throws a descriptive error when cart.gfx sprites 128-255 disagree with cart.map's shared cells", () => {
+  const fixture = fixtures.find((name) => name === "dark tomb.p8.png") ?? fixtures[0]!;
+  const originalPngBytes = readFileSync(path.join(cartDir, fixture));
+  const cart = decode(originalPngBytes);
+  cart.gfx.pixels[8192] = ((cart.gfx.pixels[8192]! + 1) % 16) as typeof cart.gfx.pixels[number];
+  assert.throws(
+    () => encode(cart, originalPngBytes),
+    /mismatch|disagree|gfx|map/i,
+  );
+});

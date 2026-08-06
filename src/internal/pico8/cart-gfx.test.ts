@@ -48,15 +48,30 @@ test("encodeGfx packs a pixel pair back into the same byte", () => {
   assert.equal(encoded[0], 0b10100001);
 });
 
-test("encodeGfx(decodeGfx(bytes)) is bit-exact against the original gfx bytes for every real fixture", async (t) => {
+test("encodeGfx(decodeGfx(bytes)) is bit-exact against the original gfx bytes for every real fixture, across the full 256-sprite range", async (t) => {
   assert.ok(fixtures.length > 0, "expected at least one .p8.png fixture in cart/");
+  assert.equal(GFX_LENGTH, 0x2000, "GFX_LENGTH must cover sprites 0-255 (0x0000-0x1FFF)");
   for (const fixture of fixtures) {
     await t.test(fixture, () => {
       const originalPngBytes = readFileSync(path.join(cartDir, fixture));
       const cartBytes = decodeCartBytes(originalPngBytes);
       const originalGfxBytes = cartBytes.subarray(GFX_OFFSET, GFX_OFFSET + GFX_LENGTH);
-      const roundTripped = encodeGfx(decodeGfx(cartBytes));
+      const decoded = decodeGfx(cartBytes);
+      assert.equal(decoded.pixels.length, 128 * 128);
+      const roundTripped = encodeGfx(decoded);
       assert.deepStrictEqual(roundTripped, originalGfxBytes);
     });
   }
+});
+
+test("decodeGfx populates sprites 128-255 (the upper half, shared with the map region) with real pixel data, not zeros", () => {
+  const fixture = fixtures.find((name) => name === "dark tomb.p8.png") ?? fixtures[0]!;
+  const originalPngBytes = readFileSync(path.join(cartDir, fixture));
+  const cartBytes = decodeCartBytes(originalPngBytes);
+  const decoded = decodeGfx(cartBytes);
+  const upperHalf = decoded.pixels.slice(8192, 16384);
+  assert.ok(
+    upperHalf.some((pixel) => pixel !== 0),
+    `expected sprites 128-255 in ${fixture} to contain at least one non-zero pixel`,
+  );
 });
