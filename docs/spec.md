@@ -43,7 +43,7 @@ The PNG file itself (its bytes on disk) **is never guaranteed to be bit-exact** 
 - Each cart byte is spread across the **2 least-significant bits** of each channel, in **A, R, G, B** order (the A channel carries the byte's 2 most-significant bits).
 - Bytes **0x8006–0x8019**: SHA1 of the first 32,000 bytes (0x0000–0x7FFF), checked by PICO-8 on load — the cartridge is rejected as corrupted if it doesn't match.
 - Bytes **0x801A–0x801F**: reserved, currently zero.
-- Limit: compressed Lua code must be **under 15,360 bytes**, so the total fits within 32 KB.
+- Limit: compressed Lua code must be **under 15,608 bytes** (the Lua region is `0x4300-0x7fff`, 15,616 bytes, minus the 8-byte recent-format header), so the total fits within 32 KB.
 - The **last 128 sprites** of the sprite sheet (bottom of the sheet) can also serve as the **bottom of the map** — data shared in PICO-8 memory.
 - The Lua code's **first two lines**, if they start with `--`, are used as the title/byline shown on the label image.
 
