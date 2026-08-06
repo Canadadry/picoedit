@@ -7,14 +7,32 @@
   "scripts": {
     "test": "node --import tsx --test 'src/**/*.test.ts'",
     "typecheck": "tsc --noEmit",
-    "cli": "node --import tsx src/cli.ts"
+    "cli": "node --import tsx src/cli.ts",
+    "dev": "vite",
+    "build": "vite build"
   },
   "dependencies": {
-    "fast-png": "^6.1.0"
+    "fast-png": "^6.1.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router": "^8.3.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.10.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.28.0",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vite": "^8.2.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

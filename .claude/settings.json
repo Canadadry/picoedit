@@ -10,6 +10,7 @@
       "Edit(tsconfig.json)",
       "Edit(.gitignore)",
       "Edit(README.md)",
+      "Edit(vite.config.ts)",
       "Write(src/**)",
       "Write(test/**)",
       "Write(docs/**)",
@@ -18,6 +19,7 @@
       "Write(tsconfig.json)",
       "Write(.gitignore)",
       "Write(README.md)",
+      "Write(vite.config.ts)",
       "Bash(mkdir *)",
       "Bash(git add *)",
       "Bash(git commit *)",
@@ -50,7 +52,9 @@
       "Bash(pngtopnm *)",
       "Bash(ppmtobmp *)",
       "Bash(bmptoppm *)",
-      "Bash(jq *)"
+      "Bash(jq *)",
+      "Bash(make dev)",
+      "Bash(make build)"
     ],
     "deny": [
       "Edit(Makefile)",
