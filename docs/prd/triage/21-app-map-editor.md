@@ -10,7 +10,7 @@ PICO-8's native map editor is a fixed-size, low-resolution grid where each cell 
 
 ## Solution
 
-Depends on PRD 18 (app shell, `CartContext`, routing), PRD 16 (repo restructure — imports come from `internal/pico8/...`), and PRD 25 (library fix for the shared sprite/map region, see below) landing first. Adds the Map tab: `app/map/MapTab.tsx` + `app/map/components/`, reading/writing `cart.map` (a `MapGrid`, `{ width: 128, height: 64, cells: number[] }`, row-major, each cell a sprite index 0-255) via `CartContext`.
+Depends on PRD 18 (landed — app shell, `CartContext`, routing), PRD 16 (landed — repo restructure — imports come from `src/internal/pico8/...`), and PRD 25 (still triage — library fix for the shared sprite/map region, see below) landing first. Adds the Map tab: `src/app/map/MapTab.tsx` + `src/app/map/components/`, reading/writing `cart.map` (a `MapGrid`, `{ width: 128, height: 64, cells: number[] }`, row-major, each cell a sprite index 0-255) via `CartContext`.
 
 The tab replicates PICO-8's own map editor toolset (per the official manual):
 - **Stamp**: click a cell to place the currently-selected stamp (a single sprite or a copied rectangular block); click-drag paints a continuous line of the single-sprite stamp across cells, matching PICO-8's own click-drag behavior.
@@ -23,7 +23,7 @@ The tab replicates PICO-8's own map editor toolset (per the official manual):
 
 **Shared sprite/map area**: cells at row 0-31 (`cells[0..4095]`, corresponding to cart bytes `0x1000-0x1FFF`) are the same memory as sprites 128-255 of the sprite sheet — editing them here also changes those sprites, and editing sprites 128-255 in the Sprite tab changes these rows. Rows 32-63 (`cells[4096..8191]`, `0x2000-0x2FFF`) are map-only. The canvas renders a persistent thin divider line between row 31 and row 32 with a label ("shared with sprite sheet" / "map-only"), so the coupling is always visible rather than a surprise.
 
-Per PRD 25 (library fix, must land first alongside PRD 18/16): `encode()` now throws if `cart.gfx`'s sprites 128-255 don't match `cart.map.cells[0..4095]`. So any stamp/fill/paste that touches rows 0-31 must call `updateCart({ map: ..., gfx: ... })` together — writing the same change into both `cart.map.cells` and the mirrored slice of `cart.gfx.pixels` — using the same shared write-mirroring helper PRD 19 introduces (`app/state/shared-sprite-region.ts`), not a separate reimplementation.
+Per PRD 25 (library fix, must land first alongside PRD 18/16): `encode()` now throws if `cart.gfx`'s sprites 128-255 don't match `cart.map.cells[0..4095]`. So any stamp/fill/paste that touches rows 0-31 must call `updateCart({ map: ..., gfx: ... })` together — writing the same change into both `cart.map.cells` and the mirrored slice of `cart.gfx.pixels` — using the same shared write-mirroring helper PRD 19 introduces (`src/app/state/shared-sprite-region.ts`), not a separate reimplementation.
 
 ## User Stories
 
@@ -35,14 +35,14 @@ Per PRD 25 (library fix, must land first alongside PRD 18/16): `encode()` now th
 
 ## Implementation Decisions
 
-- **Rendering**: the map canvas and sprite picker must render actual sprite pixels (via the palette), not bare index numbers, to be useful at a glance. PRD 17 (`docs/prd/triage/17-sprite-map-png-render.md`, not yet built) already specifies framework-free `PICO8_PALETTE` + `renderSpriteSheet()`/`renderMap()` logic explicitly intended to be reusable by "a future React display component" — but places the modules in `cmd/` (CLI-only). Since this tab is exactly that future consumer, this PRD amends PRD 17's file location: `palette.ts`/`render.ts` move to `internal/pico8/` (the shared library) instead of `cmd/`, so both `cmd/cli.ts` and `app/map/`/`app/sprite/` import the same implementation. Recommend applying this amendment before either PRD 17 or this PRD is implemented, whichever lands first.
+- **Rendering**: the map canvas and sprite picker must render actual sprite pixels (via the palette), not bare index numbers, to be useful at a glance. PRD 17 (`docs/prd/done/17-sprite-map-png-render.md`, landed) already implements framework-free `PICO8_PALETTE` + `renderSpriteSheet()`/`renderMap()` logic in `src/internal/pico8/palette.ts` / `src/internal/pico8/render.ts` — relocated there from PRD 17's original CLI-only (`cmd/`) plan specifically so this tab and the Sprite tab (PRD 19) could reuse it instead of duplicating it. This tab imports those directly from `src/internal/pico8/`; no new palette/render modules or location amendment are needed here.
 - The map canvas renders to an HTML `<canvas>` via `putImageData` from the RGBA `PixelGrid` that `renderMap()` produces (already alpha-opaque, per PRD 17) — no native `<canvas>` compositing of the source pixels themselves, avoiding the premultiplied-alpha pitfall `docs/spec.md` §6 already flags for the PNG codec path (that concern is about the *codec*, not UI canvas use, but the same rendered-pixel-buffer approach sidesteps it entirely here too).
 - Current stamp (single sprite index, or a multi-sprite rectangular block with its own width/height in sprites) lives in local component state, not `CartContext` — it's tool state, not cart data.
 - `updateCart({ map: nextGrid })` is called on every completed stamp/fill/paste action (not on every mouse-move during a drag) — one history-worthy change per user action, relevant if undo is added later (undo itself is out of scope here, see below).
 
 ## Testing Decisions
 
-- No automated tests for this PRD (see PRD 18's Testing Decisions rationale — framework choice is deferred). Manual verification: load a real fixture from `cart/`, confirm the map renders with correct sprite pixels at every cell including the shared rows, stamp/select/fill/eyedrop each work, and the resulting `MapGrid` downloads and round-trips (re-decoding the exported cart shows the edited map).
+- Component tests (Vitest + React Testing Library, jsdom) render `MapTab` inside a real `CartProvider` loaded with an actual fixture from `cart/`, and drive stamp/select/fill/eyedrop interactions via `userEvent`, asserting the resulting `cart.map.cells` (and, for edits touching rows 0-31, the mirrored `cart.gfx.pixels`) in `CartContext` — including a round-trip assertion (encode the result then decode it again in the test itself, and diff the `MapGrid`). jsdom doesn't render actual `<canvas>` pixels, so confirming every cell's sprite renders correctly on screen (vs. just the underlying data being correct) remains a manual/visual check (`npm run dev`, load a real fixture, confirm the map renders with correct sprite pixels at every cell including the shared rows) worth doing before treating this as fully validated in practice.
 
 ## Out of Scope
 
