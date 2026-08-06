@@ -1,7 +1,7 @@
 ---
 title: "React app: Code tab (Lua source editor)"
 description: "Replicate PICO-8's built-in code editor — multi-tab Lua source split on the `-->8` marker, live character/compressed-size limit indicators, comment-toggle/duplicate-line/find shortcuts — as the app's Code screen."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement

@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 const RECENT_MARKER = [0x00, 0x70, 0x78, 0x61];
 const MTF_TABLE_SIZE = 256;
 // TODO structural ceiling, not PICO-8's advisory 15,360 figure: Lua region is 0x4300-0x7fff (15616 bytes) minus the 8-byte recent-format header
-const MAX_COMPRESSED_LENGTH = 15608;
+export const MAX_COMPRESSED_LENGTH = 15608;
+// TODO 16-bit length field backing the decompressed-size header bytes
+export const MAX_DECOMPRESSED_LENGTH = 0xffff;
 const MAX_OFFSET = 32767;
 const MIN_MATCH = 3;
 const RAW_BLOCK_WINDOW = 32;
@@ -239,7 +241,7 @@ export function encodeLua(text: string): Uint8Array {
 
   const decompressedLength = bytes.length;
   assert.ok(
-    decompressedLength <= 0xffff,
+    decompressedLength <= MAX_DECOMPRESSED_LENGTH,
     `decompressed Lua code is ${decompressedLength} bytes, exceeding the 16-bit length field limit`,
   );
 
