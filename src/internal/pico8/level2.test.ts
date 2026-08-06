@@ -16,6 +16,8 @@ import { encodeLua } from "./cart-lua-encode.ts";
 const cartDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
+  "..",
+  "..",
   "cart",
 );
 const fixtures = readdirSync(cartDir).filter((name) => name.endsWith(".p8.png"));

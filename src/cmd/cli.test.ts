@@ -4,12 +4,13 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, unlinkSync } from "
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { decodePixelGrid } from "./cart-bytes.ts";
-import { LUA_OFFSET } from "./cart-lua.ts";
+import { decodePixelGrid } from "../internal/pico8/cart-bytes.ts";
+import { LUA_OFFSET } from "../internal/pico8/cart-lua.ts";
 import { decodeCommand, encodeCommand } from "./cli.ts";
 
 const cartDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
+  "..",
   "..",
   "cart",
 );

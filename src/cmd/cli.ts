@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { CartBytes } from "./cart-bytes.ts";
-import type { DecodedCart } from "./cart.ts";
-import { decode, encode } from "./cart.ts";
+import type { CartBytes } from "../internal/pico8/cart-bytes.ts";
+import type { DecodedCart } from "../internal/pico8/cart.ts";
+import { decode, encode } from "../internal/pico8/cart.ts";
 
 const JSON_FIELDS = ["gff", "gfx", "map", "sfx", "music", "label"] as const;
 type JsonField = (typeof JSON_FIELDS)[number];

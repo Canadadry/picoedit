@@ -14,6 +14,8 @@ const CART_BYTES_LENGTH = 160 * 205;
 const cartDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
+  "..",
+  "..",
   "cart",
 );
 const fixtures = readdirSync(cartDir).filter((name) => name.endsWith(".p8.png"));

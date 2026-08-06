@@ -8,6 +8,8 @@ import { decode, encode } from "./cart-bytes.ts";
 const cartDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
+  "..",
+  "..",
   "cart",
 );
 const fixtures = readdirSync(cartDir).filter((name) =>

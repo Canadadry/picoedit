@@ -5,9 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --import tsx --test 'src/**/*.test.ts'",
+    "test": "node --import tsx --test 'src/{cmd,internal}/**/*.test.ts'",
     "typecheck": "tsc --noEmit",
-    "cli": "node --import tsx src/cli.ts",
+    "cli": "node --import tsx src/cmd/cli.ts",
     "dev": "vite",
     "build": "vite build"
   },

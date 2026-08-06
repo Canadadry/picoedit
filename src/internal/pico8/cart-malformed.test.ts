@@ -10,6 +10,8 @@ import { verifyHeader } from "./cart-header.ts";
 const cartDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
+  "..",
+  "..",
   "cart",
 );
 const malformedDir = path.join(cartDir, "malformed");

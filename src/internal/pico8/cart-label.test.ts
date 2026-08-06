@@ -54,7 +54,13 @@ test("encodeLabel writes the decoded upper 6 bits back, leaving baseGrid's own l
   assert.equal(result.data[3], (21 << 2) | 0);
 });
 
-const cartDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "cart");
+const cartDir = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "cart",
+);
 const fixtures = readdirSync(cartDir).filter((name) => name.endsWith(".p8.png"));
 
 test("decodeLabel/encodeLabel round-trip preserves the full pixel grid, combined with cart-data injection, for every real fixture", async (t) => {
