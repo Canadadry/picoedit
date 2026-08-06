@@ -1,7 +1,7 @@
 ---
 title: "React app: Sprite (gfx) tab"
 description: "A canvas-based pixel editor for all 256 sprites (SpriteSheet, sprites 0-127, plus the map-shared sprites 128-255), replicating PICO-8's native sprite-editor toolset: draw, color pick, select/copy/paste/stamp, fill, and shape tools."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
