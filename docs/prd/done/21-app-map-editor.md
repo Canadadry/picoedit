@@ -1,7 +1,7 @@
 ---
 title: "React app: Map tab"
 description: "A tilemap editor for the 128x64 MapGrid, replicating PICO-8's own map editor tools (stamp, rectangular select/copy/paste, fill, eyedropper, pan/zoom) rendered with actual sprite pixels from the loaded cart's sprite sheet."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement

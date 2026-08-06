@@ -19,6 +19,9 @@ export const SHEET_HEIGHT = 128;
 
 const SHARED_REGION_PIXEL_START = 8192;
 
+/** Map cells 0-4095 (rows 0-31 of the 128x64 grid) are the shared region. */
+const SHARED_REGION_CELL_COUNT = 4096;
+
 export interface SpritePixelEdit {
   x: number;
   y: number;
@@ -31,6 +34,23 @@ export function pixelIndex(x: number, y: number): number {
 
 export function isSharedRegionPixel(x: number, y: number): boolean {
   return pixelIndex(x, y) >= SHARED_REGION_PIXEL_START;
+}
+
+/** True for `cart.map.cells` indices (row-major, 0-8191) that alias sprite pixel data. */
+export function isSharedMapCell(cellIndex: number): boolean {
+  return cellIndex < SHARED_REGION_CELL_COUNT;
+}
+
+/**
+ * A shared-region map cell's byte value is also 2 packed 4-bit pixels of the
+ * sprite sheet (sprites 128-255), at a fixed location unrelated to the
+ * cell's own (x, y) position on the map or the sprite index it stores. This
+ * returns the low-nibble pixel's coordinates for a given shared cell index;
+ * the high-nibble pixel is immediately to its right (x + 1, same y).
+ */
+export function sharedRegionPixelForMapCell(cellIndex: number): { x: number; y: number } {
+  const pixel = SHARED_REGION_PIXEL_START + cellIndex * 2;
+  return { x: pixel % SHEET_WIDTH, y: Math.floor(pixel / SHEET_WIDTH) };
 }
 
 /** Uniform read: sprites 0-255 all come from cart.gfx.pixels. */

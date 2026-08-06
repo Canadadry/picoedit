@@ -1,5 +1,10 @@
 import type { DecodedCart } from "../../internal/pico8/cart.ts";
-import { getSpritePixel, setSpritePixels } from "./shared-sprite-region.ts";
+import {
+  getSpritePixel,
+  isSharedMapCell,
+  setSpritePixels,
+  sharedRegionPixelForMapCell,
+} from "./shared-sprite-region.ts";
 
 const SHEET_PIXEL_COUNT = 128 * 128;
 const MAP_CELL_COUNT = 128 * 64;
@@ -53,4 +58,19 @@ test("setSpritePixels preserves the other nibble of a shared byte when only one 
   const patch = setSpritePixels(cart, [{ x: 10, y: 64, color: 0xa }]);
 
   expect(patch.map?.cells[5]).toBe(0xba);
+});
+
+test("isSharedMapCell is true for cell indices in rows 0-31 (cells 0-4095) and false below", () => {
+  expect(isSharedMapCell(0)).toBe(true);
+  expect(isSharedMapCell(4095)).toBe(true);
+  expect(isSharedMapCell(4096)).toBe(false);
+  expect(isSharedMapCell(8191)).toBe(false);
+});
+
+test("sharedRegionPixelForMapCell maps map cell index 8 (row 0, col 8) to gfx pixel (16, 64), matching sprite 130's top-left", () => {
+  expect(sharedRegionPixelForMapCell(8)).toEqual({ x: 16, y: 64 });
+});
+
+test("sharedRegionPixelForMapCell maps map cell index 0 to gfx pixel (0, 64)", () => {
+  expect(sharedRegionPixelForMapCell(0)).toEqual({ x: 0, y: 64 });
 });
