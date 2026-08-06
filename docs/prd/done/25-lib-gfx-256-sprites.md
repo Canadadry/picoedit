@@ -1,7 +1,7 @@
 ---
 title: "gfx: decode/encode the full 256-sprite sheet, not just sprites 0-127"
 description: "Extend cart-gfx.ts to cover all 256 sprites (0x0000-0x1FFF) instead of silently leaving sprites 128-255 zeroed, and add an encode-time consistency check against the map's shared-region cells so a mismatch fails loudly instead of silently discarding data."
-status: needs-triage
+status: done
 ---
 
 ## Problem Statement
