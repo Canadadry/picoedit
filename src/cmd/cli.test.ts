@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { decode as decodePng } from "fast-png";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -38,8 +39,15 @@ const expectedFiles = [
   "music.json",
   "label.json",
   "original.p8.png",
+  "sprite.png",
+  "map.png",
 ];
 const jsonFiles = ["gfx.json", "gff.json", "map.json", "sfx.json", "music.json", "label.json"];
+
+function pngDimensions(filePath: string): { width: number; height: number } {
+  const png = decodePng(readFileSync(filePath));
+  return { width: png.width, height: png.height };
+}
 
 test("cli decode writes all 8 expected files, and cli encode round-trips pixel-identically", async (t) => {
   assert.ok(fixtures.length > 0, "expected at least one .p8.png fixture in cart/");
@@ -71,6 +79,15 @@ test("cli decode writes all 8 expected files, and cli encode round-trips pixel-i
         );
       }
 
+      assert.deepStrictEqual(pngDimensions(path.join(outputFolder, "sprite.png")), {
+        width: 512,
+        height: 512,
+      });
+      assert.deepStrictEqual(pngDimensions(path.join(outputFolder, "map.png")), {
+        width: 4096,
+        height: 2048,
+      });
+
       const reencodedPath = path.join(outputFolder, "roundtrip.p8.png");
       encodeCommand(outputFolder, reencodedPath);
 
@@ -80,6 +97,36 @@ test("cli decode writes all 8 expected files, and cli encode round-trips pixel-i
         withoutLuaPixels(reencodedGrid.data),
         withoutLuaPixels(originalGrid.data),
       );
+    });
+  }
+});
+
+test("cli decode with an explicit scale renders sprite.png/map.png at that scale", async (t) => {
+  assert.ok(fixtures.length > 0, "expected at least one .p8.png fixture in cart/");
+  for (const fixture of fixtures) {
+    await t.test(fixture, () => {
+      const inputPath = path.join(cartDir, fixture);
+      const outputFolder = makeTempDir();
+
+      try {
+        decodeCommand(inputPath, outputFolder, 2);
+      } catch (err) {
+        assert.match(
+          (err as Error).message,
+          /legacy/i,
+          `${fixture}: decode failed with an unexpected error`,
+        );
+        return;
+      }
+
+      assert.deepStrictEqual(pngDimensions(path.join(outputFolder, "sprite.png")), {
+        width: 256,
+        height: 256,
+      });
+      assert.deepStrictEqual(pngDimensions(path.join(outputFolder, "map.png")), {
+        width: 2048,
+        height: 1024,
+      });
     });
   }
 });
