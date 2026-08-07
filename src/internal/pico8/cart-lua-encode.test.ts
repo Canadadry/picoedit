@@ -56,6 +56,13 @@ test("encodeLua round-trips real fixtures' decoded Lua source through decodeLua/
   assert.ok(sawRecentFixture, "expected at least one fixture with recent-format Lua");
 });
 
+test("encodeLua throws a descriptive error naming the character and its index when the source contains a character outside 0x00-0xFF", () => {
+  assert.throws(
+    () => encodeLua("ab’cd"),
+    /"’".*index 2|index 2.*"’"/,
+  );
+});
+
 test("encodeLua keeps a large real fixture's re-encoded output under the 15,608-byte structural Lua-region limit", () => {
   let largestFixture: { fixture: string; text: string } | null = null;
   for (const fixture of fixtures) {

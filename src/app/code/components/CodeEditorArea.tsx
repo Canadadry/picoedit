@@ -160,7 +160,7 @@ export const CodeEditorArea = forwardRef<CodeEditorAreaHandle, CodeEditorAreaPro
                           <span
                             key={charIndex}
                             data-testid="out-of-range-char"
-                            title="This character is outside PICO-8's single-byte range and will be truncated to a different character on export."
+                            title="This character is outside PICO-8's single-byte range (0x00-0xFF) and export will fail until it's removed."
                             className="underline decoration-red-500 decoration-wavy"
                           >
                             {ch}

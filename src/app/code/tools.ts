@@ -83,8 +83,8 @@ export function toggleLineComment(text: string, selectionStart: number, selectio
 
 /**
  * Indices (UTF-16 code unit offsets, matching <textarea> selection offsets) of
- * characters `encodeLua`'s `charCodeAt(i) & 0xff` truncation would silently
- * corrupt on export, i.e. every character outside the single-byte 0x00-0xff range.
+ * characters outside the single-byte 0x00-0xff range, i.e. every character
+ * `encodeLua` will reject (throw on) at export time.
  */
 export function findOutOfRangeIndices(text: string): number[] {
   const indices: number[] = [];

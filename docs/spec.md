@@ -139,7 +139,7 @@ Decoding maintains a "move-to-front" lookup table of the 256 possible byte value
 - **bit = 1**: read an index encoded in unary + fixed bits, pointing into the move-to-front table; the found byte is emitted to the output, then moved to the front of the table.
 - **bit = 0**: read an offset/length pair (offset encoded on 5, 10, or 15 bits depending on 2 selector bits; length encoded in groups of 3 bits, accumulated as long as the group equals 7). Step back "offset" characters into the output already produced, copy "length" characters — the length can exceed the offset, in which case the pattern repeats. Special case: if the offset is encoded on 10 bits and equals 1, it's not a copy but the start of an uncompressed character block, read 8 bits at a time up to a null byte.
 
-This algorithm (move-to-front + unary) is symmetric: the compactor will need to implement the matching encoder, optimizing to stay under the 15,360-byte compressed limit.
+This algorithm (move-to-front + unary) is symmetric: the compactor will need to implement the matching encoder, optimizing to stay under the 15,608-byte compressed limit.
 
 ### 8.3 sfx (offset `0x3200`, 68 bytes × 64 sounds)
 

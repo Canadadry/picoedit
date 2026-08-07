@@ -113,7 +113,7 @@ test(
   10000,
 );
 
-test("pasting a multi-byte Unicode character into the source flags it in the overlay as truncation-prone", async () => {
+test("pasting a multi-byte Unicode character into the source flags it in the overlay, and the status bar reports the invalid character rather than the compressed-size limit", async () => {
   const user = userEvent.setup();
   renderCodeTab("dark tomb.p8.png");
   await waitFor(() => getTextarea());
@@ -124,6 +124,15 @@ test("pasting a multi-byte Unicode character into the source flags it in the ove
   await waitFor(() => {
     expect(screen.getAllByTestId("out-of-range-char").length).toBeGreaterThan(0);
   });
+
+  await waitFor(
+    () => {
+      const statusText = screen.getByTestId("code-status-bar").textContent ?? "";
+      expect(statusText).toMatch(/outside pico-8's single-byte range/i);
+      expect(statusText).not.toMatch(/exceeds the compressed-size limit/i);
+    },
+    { timeout: 3000 },
+  );
 });
 
 test("Ctrl+D duplicates the current line directly below it", async () => {

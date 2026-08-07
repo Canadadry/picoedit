@@ -230,7 +230,12 @@ function compress(bytes: number[]): Uint8Array {
 export function encodeLua(text: string): Uint8Array {
   const bytes: number[] = new Array(text.length);
   for (let i = 0; i < text.length; i++) {
-    bytes[i] = text.charCodeAt(i) & 0xff;
+    const code = text.charCodeAt(i);
+    assert.ok(
+      code <= 0xff,
+      `Lua source contains an out-of-range character "${text[i]}" (code point ${code}) at index ${i}; only 0x00-0xFF is supported`,
+    );
+    bytes[i] = code;
   }
 
   const compressed = compress(bytes);
