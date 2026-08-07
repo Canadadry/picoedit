@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { decodePixelGrid } from "./cart-bytes.ts";
+import { decodePixelGrid, extractCartBytes } from "./cart-bytes.ts";
+import { verifyHeader } from "./cart-header.ts";
 import { LUA_OFFSET } from "./cart-lua.ts";
 import { decode, encode } from "./cart.ts";
 
@@ -74,4 +75,27 @@ test("encode throws a descriptive error when cart.gfx sprites 128-255 disagree w
     () => encode(cart, originalPngBytes),
     /mismatch|disagree|gfx|map/i,
   );
+});
+
+test("encode writes a freshly computed checksum that verifyHeader accepts", () => {
+  const fixture = fixtures.find((name) => name === "dark tomb.p8.png") ?? fixtures[0]!;
+  const originalPngBytes = readFileSync(path.join(cartDir, fixture));
+  const cart = decode(originalPngBytes);
+  cart.gfx.pixels[0] = ((cart.gfx.pixels[0]! + 1) % 16) as (typeof cart.gfx.pixels)[number];
+
+  const reencodedPngBytes = encode(cart, originalPngBytes);
+  const reencodedBytes = extractCartBytes(decodePixelGrid(reencodedPngBytes));
+
+  assert.doesNotThrow(() => verifyHeader(reencodedBytes));
+});
+
+test("decode -> edit -> encode -> decode round trip does not throw for a real fixture", () => {
+  const fixture = fixtures.find((name) => name === "dark tomb.p8.png") ?? fixtures[0]!;
+  const originalPngBytes = readFileSync(path.join(cartDir, fixture));
+  const cart = decode(originalPngBytes);
+  cart.gfx.pixels[0] = ((cart.gfx.pixels[0]! + 1) % 16) as (typeof cart.gfx.pixels)[number];
+
+  const reencodedPngBytes = encode(cart, originalPngBytes);
+
+  assert.doesNotThrow(() => decode(reencodedPngBytes));
 });

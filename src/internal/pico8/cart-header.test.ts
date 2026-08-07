@@ -32,7 +32,7 @@ test("verifyHeader passes when the stored SHA1 matches the first 0x8000 bytes", 
   const bytes = makeCartBytes();
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-1", bytes.subarray(0, HASHED_LENGTH)));
   bytes.set(digest, SHA1_OFFSET);
-  await assert.doesNotReject(() => verifyHeader(bytes));
+  assert.doesNotThrow(() => verifyHeader(bytes));
 });
 
 test("verifyHeader throws when the stored SHA1 doesn't match", async () => {
@@ -40,7 +40,7 @@ test("verifyHeader throws when the stored SHA1 doesn't match", async () => {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-1", bytes.subarray(0, HASHED_LENGTH)));
   bytes.set(digest, SHA1_OFFSET);
   bytes[0] = (bytes[0]! + 1) % 256;
-  await assert.rejects(() => verifyHeader(bytes));
+  assert.throws(() => verifyHeader(bytes));
 });
 
 test("verifyHeader accepts the CartBytes decoded from every real fixture", async (t) => {
@@ -52,18 +52,18 @@ test("verifyHeader accepts the CartBytes decoded from every real fixture", async
     await t.test(fixture, async () => {
       const originalPngBytes = readFileSync(path.join(cartDir, fixture));
       const cartBytes = decode(originalPngBytes);
-      await assert.doesNotReject(() => verifyHeader(cartBytes));
+      assert.doesNotThrow(() => verifyHeader(cartBytes));
     });
   }
 });
 
 test("writeHeader recomputes the SHA1 and preserves the version/reserved bytes", async (t) => {
   for (const fixture of fixtures) {
-    await t.test(fixture, async () => {
+    await t.test(fixture, () => {
       const originalPngBytes = readFileSync(path.join(cartDir, fixture));
       const cartBytes = decode(originalPngBytes);
-      const rewritten = await writeHeader(cartBytes);
-      await assert.doesNotReject(() => verifyHeader(rewritten));
+      const rewritten = writeHeader(cartBytes);
+      assert.doesNotThrow(() => verifyHeader(rewritten));
       assert.deepStrictEqual(
         rewritten.subarray(0x8000, 0x8006),
         cartBytes.subarray(0x8000, 0x8006),

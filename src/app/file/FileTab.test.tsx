@@ -67,6 +67,20 @@ test("loading a malformed cart fixture shows an inline error and no filename or 
   expect(screen.queryByRole("button", { name: /download/i })).toBeNull();
 });
 
+test("loading a cart with a mismatched header checksum shows an inline error and no filename or Download button", async () => {
+  const user = userEvent.setup();
+  const { container } = renderFileTab();
+  const file = loadFixture("bad-sha1.p8.png", path.join(cartDir, "malformed"));
+
+  await user.upload(getFileInput(container), file);
+
+  await waitFor(() => {
+    expect(screen.getByText(/sha1 mismatch/i)).toBeTruthy();
+  });
+  expect(screen.queryByText(/^Loaded:/)).toBeNull();
+  expect(screen.queryByRole("button", { name: /download/i })).toBeNull();
+});
+
 test("clicking Download after a valid cart is loaded triggers the download flow without throwing", async () => {
   const user = userEvent.setup();
   const createObjectURL = vi.fn(() => "blob:mock-url");

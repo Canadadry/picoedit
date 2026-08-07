@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import type { CartBytes, PixelGrid } from "./cart-bytes.ts";
 import { decode, encode, encodePixelGrid } from "./cart-bytes.ts";
 import { verifyHeader } from "./cart-header.ts";
+import { decode as decodeCart } from "./cart.ts";
 
 const cartDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -58,13 +59,18 @@ mkdirSync(malformedDir, { recursive: true });
 generateBadSha1Fixture();
 generateBadDimensionsFixture();
 
-test("verifyHeader throws on a malformed fixture whose data was tampered with but stored SHA1 wasn't recomputed", async () => {
+test("verifyHeader throws on a malformed fixture whose data was tampered with but stored SHA1 wasn't recomputed", () => {
   const pngBytes = readFileSync(path.join(malformedDir, BAD_SHA1_FIXTURE));
   const cartBytes = decode(pngBytes);
-  await assert.rejects(() => verifyHeader(cartBytes), /SHA1 mismatch/i);
+  assert.throws(() => verifyHeader(cartBytes), /SHA1 mismatch/i);
 });
 
 test("decode throws on a malformed fixture with the wrong PNG height", () => {
   const pngBytes = readFileSync(path.join(malformedDir, BAD_DIMENSIONS_FIXTURE));
   assert.throws(() => decode(pngBytes), /height/i);
+});
+
+test("decode (cart.ts) throws a SHA1-mismatch error on a malformed fixture whose data was tampered with but stored SHA1 wasn't recomputed", () => {
+  const pngBytes = readFileSync(path.join(malformedDir, BAD_SHA1_FIXTURE));
+  assert.throws(() => decodeCart(pngBytes), /SHA1 mismatch/i);
 });
