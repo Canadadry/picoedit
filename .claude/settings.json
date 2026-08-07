@@ -61,11 +61,7 @@
     ],
     "deny": [
       "Edit(Makefile)",
-      "Write(Makefile)",
-      "Edit(//**)",
-      "Write(//**)",
-      "Edit(~/**)",
-      "Write(~/**)"
+      "Write(Makefile)"
     ],
     "defaultMode": "dontAsk"
   },
