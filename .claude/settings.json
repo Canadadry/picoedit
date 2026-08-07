@@ -61,9 +61,19 @@
     ],
     "deny": [
       "Edit(Makefile)",
-      "Write(Makefile)"
+      "Write(Makefile)",
+      "Edit(//**)",
+      "Write(//**)",
+      "Edit(~/**)",
+      "Write(~/**)"
     ],
     "defaultMode": "dontAsk"
+  },
+  "sandbox": {
+    "enabled": true,
+    "network": {
+      "allowedDomains": ["github.com", "*.github.com", "registry.npmjs.org", "*.npmjs.org"]
+    }
   },
   "hooks": {
     "PreToolUse": [
